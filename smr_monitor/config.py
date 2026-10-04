@@ -32,6 +32,11 @@ def _float(name, default):
     return float(os.getenv(name, default).replace(",", "."))
 
 
+def _opt_float(name, default=""):
+    raw = os.getenv(name, default).strip()
+    return float(raw.replace(",", ".")) if raw else None
+
+
 def _list(name, default=""):
     return [v.strip() for v in os.getenv(name, default).split(",") if v.strip()]
 
@@ -61,6 +66,13 @@ class Settings:
     meter_marks: bool = field(default_factory=lambda: os.getenv("AVISAR_CADA_METRO", "1") == "1")
     hysteresis_m: float = field(default_factory=lambda: _float("HISTERESE_M", "0.05"))
     critical_repeat_min: float = field(default_factory=lambda: _float("REPETIR_CRITICO_MIN", "15"))
+
+    # Faixas aceitáveis das vazões (m³/h). Alerta quando sai da faixa; vazio = sem limite.
+    flow_limits: dict = field(default_factory=lambda: {
+        "r0_r2": (_opt_float("R0_R2_VAZAO_MIN", "1900"), _opt_float("R0_R2_VAZAO_MAX")),
+        "r0_r8": (_opt_float("R0_R8_VAZAO_MIN", "790"), _opt_float("R0_R8_VAZAO_MAX")),
+    })
+    flow_hysteresis_pct: float = field(default_factory=lambda: _float("VAZAO_HISTERESE_PCT", "1"))
 
     # Agendamento
     check_interval_min: float = field(default_factory=lambda: _float("INTERVALO_VERIFICACAO_MIN", "5"))

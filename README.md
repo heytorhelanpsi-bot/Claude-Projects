@@ -6,8 +6,8 @@ e envia avisos pelo **Telegram**.
 | Ponto | O que é monitorado |
 |---|---|
 | **R0 Sobrado (nível)** | níveis críticos, subida rápida, cada metro alcançado |
-| **R0-R2 (vazão)** | valor no relatório + aviso de "sem comunicação" |
-| **R0-R8 (macro)** | valor no relatório + aviso de "sem comunicação" |
+| **R0-R2 (vazão)** | vazão abaixo de **1.900 m³/h** (faixa normal 1.900 a 2.100) + "sem comunicação" |
+| **R0-R8 (macro)** | vazão abaixo de **790 m³/h** (faixa normal 790 a 910) + "sem comunicação" |
 
 ## Regras de aviso
 
@@ -16,13 +16,15 @@ e envia avisos pelo **Telegram**.
 | Nível **≤ 1,20 m** ou **≥ 3,95 m** | 🚨 alerta na hora, repetido a cada 15 min enquanto durar, e ✅ quando normalizar |
 | Nível sobe **0,20 m ou mais em menos de 30 min** | 📈 subida rápida (no máximo 1 aviso a cada 30 min) |
 | Nível passa por um **metro inteiro** (1 m, 2 m, 3 m…) | ⬆️ alcançou / ⬇️ desceu abaixo |
-| A cada **15 min** | 📊 relatório com os 3 pontos e a tendência do nível |
+| Vazão **R0-R2 < 1.900 m³/h** ou **R0-R8 < 790 m³/h** | 🚨 alerta com a vazão atual, repetido a cada 15 min enquanto durar, e ✅ quando voltar à faixa |
+| A cada **15 min** | 📊 relatório com o nível e as vazões atuais (vazão fora da faixa vem marcada com 🚨) |
 | Ponto "sem comunicação" ou parado há mais de 60 min | ⚠️ aviso (uma vez) e ✅ quando voltar |
 | SMR fora do ar ou login recusado (3 tentativas seguidas) | ❌ aviso e ✅ quando voltar |
 
 O agente verifica o SMR **a cada 5 minutos**, para que um nível crítico seja avisado logo, e
 manda o relatório completo a cada 15 minutos. Todos os valores podem ser alterados no arquivo `.env`
-(veja `.env.example`). Uma margem de 0,05 m (histerese) evita que o mesmo aviso fique se repetindo
+(veja `.env.example`). Vazão acima da faixa não gera alerta. Para alertar também vazão alta, preencha `R0_R2_VAZAO_MAX` /
+`R0_R8_VAZAO_MAX`. Uma margem de 0,05 m no nível e de 1% na vazão (histerese) evita que o mesmo aviso fique se repetindo
 quando o nível oscila em cima de um limite.
 
 ## 1. Criar o bot do Telegram (5 minutos)

@@ -14,17 +14,17 @@ def cfg(tmp_path):
     return Settings(report_interval_min=15)
 
 
-def readings(level, t, no_comm=False):
+def readings(level, t, no_comm=False, r2=2140.13, r8=904.22):
     return {
         "r0_sobrado": Reading("r0_sobrado", level, t, no_comm),
-        "r0_r2": Reading("r0_r2", 2140.13, t),
-        "r0_r8": Reading("r0_r8", 904.22, t),
+        "r0_r2": Reading("r0_r2", r2, t),
+        "r0_r8": Reading("r0_r8", r8, t),
     }
 
 
-def run(cfg, state, level, minutes, no_comm=False):
+def run(cfg, state, level, minutes, no_comm=False, **flows):
     t = T0 + timedelta(minutes=minutes)
-    return rules.evaluate(readings(level, t, no_comm), t, state, cfg)
+    return rules.evaluate(readings(level, t, no_comm, **flows), t, state, cfg)
 
 
 def alerts(msgs):
@@ -115,3 +115,33 @@ def test_failures(cfg):
     assert "Não foi possível ler" in rules.register_failure("<erro>", state, cfg)[0]
     assert rules.register_failure("x", state, cfg) == []
     assert any("restabelecido" in m for m in run(cfg, state, 3.0, 0))
+
+
+def test_flow_r0_r2_below_range(cfg):
+    state = {}
+    run(cfg, state, 3.0, 0, r2=2000)
+    msgs = run(cfg, state, 3.0, 5, r2=1850.5)
+    assert any("Vazão R0-R2 ABAIXO da faixa" in m and "1.850,50 m³/h" in m and "mínimo 1.900" in m for m in msgs)
+    assert not alerts(run(cfg, state, 3.0, 10, r2=1800))  # sem repetir antes de 15 min
+    assert any("R0-R2 continua abaixo" in m for m in run(cfg, state, 3.0, 20, r2=1800))
+    assert not alerts(run(cfg, state, 3.0, 25, r2=1910))  # histerese de 1%: ainda baixa
+    assert any("R0-R2 voltou à faixa normal" in m for m in run(cfg, state, 3.0, 30, r2=1950))
+
+
+def test_flow_r0_r8_below_range_and_report(cfg):
+    state = {}
+    msgs = run(cfg, state, 3.0, 0, r8=780)
+    assert any("Vazão R0-R8 ABAIXO da faixa" in m for m in msgs)
+    report = [m for m in msgs if m.startswith("📊")][0]
+    assert "780,00 m³/h</b> 🚨 fora da faixa" in report
+
+
+def test_flow_high_values_are_normal_by_default(cfg):
+    state = {}
+    assert not alerts(run(cfg, state, 3.0, 0, r2=2300, r8=1000))
+
+
+def test_flow_max_when_configured(cfg):
+    cfg.flow_limits["r0_r8"] = (790, 910)
+    state = {}
+    assert any("R0-R8 ACIMA da faixa" in m and "790 a 910" in m for m in run(cfg, state, 3.0, 0, r8=950))

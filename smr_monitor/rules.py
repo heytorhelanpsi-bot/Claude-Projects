@@ -5,6 +5,8 @@ Regras do reservatório R0 Sobrado:
     alerta ao entrar, lembrete a cada REPETIR_CRITICO_MIN e aviso ao normalizar;
   * subida de SUBIDA_RAPIDA_M ou mais em menos de SUBIDA_RAPIDA_JANELA_MIN;
   * a cada metro inteiro alcançado (subindo ou descendo).
+Vazões R0-R2 e R0-R8: alerta quando ficam abaixo (ou acima, se configurado) da faixa
+  aceitável, lembrete a cada REPETIR_CRITICO_MIN e aviso ao normalizar.
 Todos os pontos: aviso de "sem comunicação" / dado atrasado e de falha de acesso ao SMR.
 Relatório de situação a cada INTERVALO_RELATORIO_MIN.
 """
@@ -120,6 +122,62 @@ def _level_rule(level, t, state, cfg: Settings):
     return msgs
 
 
+def _flow_zone(value, lo, hi, prev, hyst_pct):
+    if lo is not None and value < lo:
+        return "low"
+    if hi is not None and value > hi:
+        return "high"
+    if prev == "low" and lo is not None and value < lo * (1 + hyst_pct / 100):
+        return "low"
+    if prev == "high" and hi is not None and value > hi * (1 - hyst_pct / 100):
+        return "high"
+    return None
+
+
+def _range_txt(lo, hi):
+    if lo is not None and hi is not None:
+        return f"{fmt(lo, 0)} a {fmt(hi, 0)} m³/h"
+    if lo is not None:
+        return f"mínimo {fmt(lo, 0)} m³/h"
+    return f"máximo {fmt(hi, 0)} m³/h"
+
+
+def _flow_rule(readings, now, state, cfg: Settings):
+    msgs = []
+    flows = state.setdefault("flow", {})
+    for p in POINTS:
+        lo, hi = cfg.flow_limits.get(p.key, (None, None))
+        r = readings.get(p.key)
+        if (lo is None and hi is None) or r is None or r.value is None or r.no_comm:
+            continue
+        t = r.timestamp or now
+        st = flows.setdefault(p.key, {})
+        prev = st.get("zone")
+        zone = _flow_zone(r.value, lo, hi, prev, cfg.flow_hysteresis_pct)
+        faixa = _range_txt(lo, hi)
+        name = p.label.split(" (")[0]
+        word = {"low": "ABAIXO", "high": "ACIMA"}
+        if zone and zone != prev:
+            msgs.append(
+                f"🚨 <b>Vazão {name} {word[zone]} da faixa</b>\n"
+                f"Atual: <b>{fmt(r.value)} m³/h</b> às {_hhmm(t)} (faixa: {faixa})"
+            )
+            st["last_alert"] = t.isoformat()
+        elif zone and _minutes_since(t, st.get("last_alert")) >= cfg.critical_repeat_min - 0.5:
+            msgs.append(
+                f"🚨 <b>Vazão {name} continua {word[zone].lower()} da faixa</b>\n"
+                f"Atual: <b>{fmt(r.value)} m³/h</b> às {_hhmm(t)} (faixa: {faixa})"
+            )
+            st["last_alert"] = t.isoformat()
+        elif not zone and prev:
+            msgs.append(
+                f"✅ <b>Vazão {name} voltou à faixa normal</b>\n"
+                f"Atual: <b>{fmt(r.value)} m³/h</b> às {_hhmm(t)}"
+            )
+        st["zone"] = zone
+    return msgs
+
+
 def _freshness_rule(readings, now, state, cfg: Settings):
     msgs = []
     stale = state.setdefault("stale", {})
@@ -168,6 +226,9 @@ def build_report(readings, now, state, cfg: Settings):
         txt = f"{icon} {p.label}: <b>{fmt(r.value)} {p.unit}</b>"
         if p.key == LEVEL_KEY and r.timestamp:
             txt += _trend(state, r.value, r.timestamp, cfg)
+        lo, hi = cfg.flow_limits.get(p.key, (None, None))
+        if state.get("flow", {}).get(p.key, {}).get("zone"):
+            txt += f" 🚨 fora da faixa ({_range_txt(lo, hi)})"
         if r.no_comm:
             txt += " ⚠️ sem comunicação"
         elif r.timestamp:
@@ -192,6 +253,8 @@ def evaluate(readings: dict, now: datetime, state: dict, cfg: Settings):
     if lvl and lvl.value is not None and not lvl.no_comm:
         t = lvl.timestamp or now
         msgs += _level_rule(lvl.value, t, state, cfg)
+
+    msgs += _flow_rule(readings, now, state, cfg)
 
     if (
         cfg.report_interval_min > 0
