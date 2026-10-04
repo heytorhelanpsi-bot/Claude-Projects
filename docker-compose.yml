@@ -1,0 +1,8 @@
+services:
+  smr-monitor:
+    build: .
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    ipc: host
