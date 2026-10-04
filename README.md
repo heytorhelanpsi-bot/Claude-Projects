@@ -21,6 +21,7 @@ e envia avisos pelo **Telegram**.
 | Ponto "sem comunicação" ou parado há mais de 60 min | ⚠️ aviso (uma vez) e ✅ quando voltar |
 | SMR fora do ar ou login recusado (3 tentativas seguidas) | ❌ aviso e ✅ quando voltar |
 
+O monitor pode ser **ligado e desligado pelo Telegram** (veja "Comandos no Telegram").
 O agente verifica o SMR **a cada 5 minutos**, para que um nível crítico seja avisado logo, e
 manda o relatório completo a cada 15 minutos. Todos os valores podem ser alterados no arquivo `.env`
 (veja `.env.example`). Vazão acima da faixa não gera alerta. Para alertar também vazão alta, preencha `R0_R2_VAZAO_MAX` /
@@ -37,58 +38,68 @@ quando o nível oscila em cima de um limite.
    `"chat":{"id": ...}`. Esse número é o `TELEGRAM_CHAT_ID` (de grupo começa com `-`).
    Pode colocar vários, separados por vírgula.
 
-## 2. Configurar
+## 2. Comandos no Telegram
+
+Qualquer pessoa cadastrada em `TELEGRAM_CHAT_ID` pode controlar o monitor pelo próprio chat do bot
+(os comandos também aparecem no botão "/" do Telegram):
+
+| Comando | O que faz |
+|---|---|
+| `/desligar` | Desliga tudo: o monitor para de acessar o SMR e não manda nenhum aviso |
+| `/ligar` | Religa o monitor e manda um relatório na hora |
+| `/status` | Lê o SMR agora e mostra os valores (funciona mesmo desligado) |
+| `/relatorios_off` | Pausa só os relatórios de 15 min; os alertas continuam |
+| `/relatorios_on` | Volta a mandar os relatórios de 15 min |
+| `/ajuda` | Lista os comandos e mostra a situação atual |
+
+A escolha (ligado/desligado, relatórios pausados) fica salva e continua valendo mesmo se o servidor
+reiniciar. Mensagens de chats que não estão em `TELEGRAM_CHAT_ID` são ignoradas.
+
+## 3. Colocar na nuvem de graça (Oracle Cloud Always Free)
+
+O monitor roda numa máquina **gratuita para sempre** do Oracle Cloud (VM.Standard.E2.1.Micro ou
+Ampere A1, região São Paulo). O passo a passo para leigos está no guia
+"Guia passo a passo – Monitor SMR no Telegram". Resumo:
+
+1. Criar a conta no Oracle Cloud (região **Brazil East – São Paulo**) e uma instância **Ubuntu** com
+   formato *Always Free*.
+2. Converter a conta para **Pay As You Go**. Continua gratuito dentro dos limites Always Free, mas o
+   Oracle deixa de desligar máquinas gratuitas "ociosas" (e este monitor usa pouquíssima CPU).
+   Por segurança, crie um orçamento (*Budget*) de US$ 1 com alerta por e-mail.
+3. Abrir o terminal da instância pelo navegador (Cloud Shell → SSH) e rodar **um comando**:
 
 ```bash
-cp .env.example .env
-nano .env          # preencha SMR_USER, SMR_PASSWORD, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+curl -fsSL https://raw.githubusercontent.com/heytorhelanpsi-bot/Claude-Projects/monitor-smr/instalar.sh | bash
 ```
 
-O `.env` fica só no servidor e está no `.gitignore`, então a senha nunca vai para o GitHub.
+O instalador (`instalar.sh`) instala tudo, cria memória extra (swap) se o servidor tiver só 1 GB, pergunta
+usuário/senha do SMR e os dados do Telegram (gravados só no servidor, em `~/monitor-smr/.env`, com
+permissão restrita) e deixa o monitor como serviço que liga sozinho quando o servidor reinicia.
 
-## 3. Colocar na nuvem
+Depois, no servidor:
 
-**Caminho mais fácil (recomendado para quem não é da área de TI): Railway.** O Railway usa o
-`Dockerfile` deste repositório sozinho. Basta criar o projeto a partir do GitHub, colar as variáveis do
-`.env.example` na aba *Variables* e criar um *Volume* em `/app/data`. O passo a passo detalhado está no
-guia "Guia passo a passo – Monitor SMR no Telegram".
+| Comando | Para quê |
+|---|---|
+| `monitor-smr status` | Ver se está rodando |
+| `monitor-smr logs` | Ver as últimas linhas do registro |
+| `monitor-smr atualizar` | Baixar a versão mais nova do programa |
+| `monitor-smr configurar` | Trocar senha do SMR, token ou chat ID |
+| `monitor-smr testar` | Ler o SMR e mandar um relatório de teste (salva capturas em `data/debug`) |
+| `monitor-smr reiniciar` | Reiniciar o monitor |
 
-**Alternativa: servidor próprio.** O agente precisa ficar ligado 24 h. Qualquer servidor Linux pequeno com Docker serve, por exemplo:
+Para mudar limites (ex.: `R0_R2_VAZAO_MIN`), edite `~/monitor-smr/.env` (`nano ~/monitor-smr/.env`) e
+rode `monitor-smr reiniciar`.
 
-- **Google Cloud – e2-micro** (faixa gratuita "Always Free", regiões dos EUA);
-- **Oracle Cloud – Always Free**;
-- uma VPS barata (Hostinger, DigitalOcean, Contabo…, de US$ 4 a 6 por mês).
-
-No servidor:
-
-```bash
-# instalar Docker (Ubuntu/Debian)
-curl -fsSL https://get.docker.com | sh
-
-git clone https://github.com/heytorhelanpsi-bot/Claude-Projects.git monitor-smr
-cd monitor-smr
-cp .env.example .env && nano .env
-
-# teste: lê o SMR, salva captura da página em data/debug e manda um relatório ao Telegram
-docker compose run --rm smr-monitor python -m smr_monitor --test --debug
-
-# ligar de vez (reinicia sozinho se o servidor reiniciar)
-docker compose up -d --build
-docker compose logs -f        # acompanhar
-```
-
-Para atualizar depois de mudanças no código: `git pull && docker compose up -d --build`.
-
-> **Por que não GitHub Actions?** O repositório é privado. Rodar a cada 5 ou 15 minutos gastaria
-> de 3.000 a 9.000 minutos por mês, acima dos 2.000 gratuitos, e os agendamentos do Actions
-> costumam atrasar, o que é ruim para alertas críticos.
+> **Outras opções:** qualquer servidor Linux com Docker serve (`docker compose up -d --build`, usando
+> o `Dockerfile` e o `docker-compose.yml`). O Google Cloud e2-micro também funciona, mas desde 2024 o
+> IP público custa cerca de US$ 3,65/mês ([preços](https://cloud.google.com/vpc/pricing)).
 
 ## Se o agente não encontrar os valores
 
 O SMR não pôde ser acessado durante o desenvolvimento, então a leitura foi feita a partir das
 capturas de tela do sistema. Se o teste reclamar de login ou de "ponto não encontrado":
 
-1. Rode o teste com `--debug` e veja os arquivos em `data/debug/` (`.png`, `.html` e `.txt` da página).
+1. Rode `monitor-smr testar` e veja os arquivos em `~/monitor-smr/data/debug/` (`.png`, `.html` e `.txt` da página).
 2. Se o formulário de login não for reconhecido, informe os seletores CSS no `.env`
    (`SMR_USER_SELECTOR`, `SMR_PASSWORD_SELECTOR`, `SMR_SUBMIT_SELECTOR`).
 3. Se os cartões estiverem em outra tela depois do login, coloque a URL em `SMR_PAGES`.
@@ -111,4 +122,5 @@ python -m pytest -q
 ```
 
 Os testes conferem a leitura dos cartões (com os textos das capturas de tela), todas as regras de
-aviso e o login com navegador num SMR simulado (`tests/fake_smr.py`).
+aviso, os comandos do Telegram e o monitor completo rodando contra um SMR e um Telegram simulados
+(`tests/fake_smr.py`, `tests/fake_telegram.py`).

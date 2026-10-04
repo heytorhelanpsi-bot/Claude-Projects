@@ -7,7 +7,7 @@ from pathlib import Path
 try:
     from dotenv import load_dotenv
 
-    load_dotenv()
+    load_dotenv(interpolate=False)  # senhas com "$" ficam como estão
 except ImportError:  # python-dotenv é opcional
     pass
 

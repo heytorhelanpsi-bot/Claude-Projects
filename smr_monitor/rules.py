@@ -258,6 +258,7 @@ def evaluate(readings: dict, now: datetime, state: dict, cfg: Settings):
 
     if (
         cfg.report_interval_min > 0
+        and state.get("reports", True)
         and _minutes_since(now, state.get("last_report")) >= cfg.report_interval_min - 0.5
     ):
         msgs.append(build_report(readings, now, state, cfg))
