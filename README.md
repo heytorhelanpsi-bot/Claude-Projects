@@ -48,7 +48,12 @@ O `.env` fica só no servidor e está no `.gitignore`, então a senha nunca vai 
 
 ## 3. Colocar na nuvem
 
-O agente precisa ficar ligado 24 h. Qualquer servidor Linux pequeno com Docker serve, por exemplo:
+**Caminho mais fácil (recomendado para quem não é da área de TI): Railway.** O Railway usa o
+`Dockerfile` deste repositório sozinho. Basta criar o projeto a partir do GitHub, colar as variáveis do
+`.env.example` na aba *Variables* e criar um *Volume* em `/app/data`. O passo a passo detalhado está no
+guia "Guia passo a passo – Monitor SMR no Telegram".
+
+**Alternativa: servidor próprio.** O agente precisa ficar ligado 24 h. Qualquer servidor Linux pequeno com Docker serve, por exemplo:
 
 - **Google Cloud – e2-micro** (faixa gratuita "Always Free", regiões dos EUA);
 - **Oracle Cloud – Always Free**;

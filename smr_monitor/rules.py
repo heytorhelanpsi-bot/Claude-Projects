@@ -273,6 +273,6 @@ def register_failure(error: str, state: dict, cfg: Settings):
         state["fail_alerted"] = True
         return [
             f"❌ <b>Não foi possível ler o SMR</b> ({state['fail_count']} tentativas seguidas).\n"
-            f"Erro: <code>{html.escape(error[:300])}</code>"
+            f"Erro: <code>{html.escape(error[:700])}</code>"
         ]
     return []

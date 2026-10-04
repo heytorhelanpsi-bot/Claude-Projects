@@ -71,7 +71,7 @@ def _settle(page):
 def fetch_text(cfg: Settings, debug: bool = False) -> str:
     """Faz login e retorna o texto visível de todas as páginas configuradas."""
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
+        browser = pw.chromium.launch(headless=True, args=["--disable-dev-shm-usage"])
         try:
             page = browser.new_page(viewport={"width": 1280, "height": 2000}, locale="pt-BR")
             page.set_default_timeout(45_000)

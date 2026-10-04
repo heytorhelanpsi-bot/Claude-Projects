@@ -40,7 +40,8 @@ def check_once(cfg: Settings, state: dict, debug: bool = False):
         text = fetch_text(cfg, debug=debug)
         readings = parse_readings(text, POINTS)
         if not readings:
-            raise RuntimeError("nenhum dos pontos monitorados foi encontrado na página")
+            trecho = " | ".join(line.strip() for line in text.splitlines() if line.strip())[:400]
+            raise RuntimeError(f"nenhum dos pontos monitorados foi encontrado na página. Página lida: {trecho}")
     except Exception as e:  # noqa: BLE001 - qualquer falha vira aviso
         traceback.print_exc()
         msgs = rules.register_failure(f"{type(e).__name__}: {e}", state, cfg)
