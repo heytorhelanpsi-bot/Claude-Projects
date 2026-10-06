@@ -69,8 +69,41 @@ if [ ! -f .env ] || [ "${1:-}" = "--reconfigurar" ]; then
   echo "Responda as perguntas abaixo. A senha não aparece enquanto você digita (é normal)."
   perguntar SMR_USER "Usuário do SMR"
   perguntar SMR_PASSWORD "Senha do SMR" secreto
-  perguntar TG_TOKEN "Token do bot do Telegram (passo 1 do guia)"
-  perguntar TG_CHAT "Chat ID do Telegram (passo 2 do guia; vários separados por vírgula)"
+  # Token: conferido com o Telegram na hora
+  while true; do
+    perguntar TG_TOKEN "Token do bot do Telegram (cole o que o BotFather mandou)"
+    TG_TOKEN="${TG_TOKEN#bot}"
+    if BOT=$(TG_TOKEN="$TG_TOKEN" .venv/bin/python -m smr_monitor.telegram_setup verificar 2>/dev/null); then
+      echo "   Token OK! Seu bot é @$BOT"
+      break
+    fi
+    echo "   O Telegram não aceitou esse token. Copie de novo no BotFather só o token"
+    echo "   (número, dois-pontos e letras, ex.: 7123456789:AAH4kX9s...) e cole outra vez."
+  done
+
+  # Chat ID: descoberto sozinho a partir de uma mensagem mandada ao bot
+  TG_CHAT=""
+  while [ -z "$TG_CHAT" ]; do
+    echo
+    echo "Agora, no Telegram, abra a conversa com @$BOT e mande: oi"
+    echo "(Para avisar também um grupo: adicione o bot ao grupo e mande /oi no grupo.)"
+    read -r -p "Depois de mandar, aperte Enter aqui (ou digite os Chat IDs, se já souber): " RESP < /dev/tty
+    RESP="$(printf '%s' "$RESP" | tr -d ' ')"
+    if [ -n "$RESP" ]; then TG_CHAT="$RESP"; break; fi
+    CHATS=$(TG_TOKEN="$TG_TOKEN" .venv/bin/python -m smr_monitor.telegram_setup descobrir 2>/dev/null || true)
+    if [ -z "$CHATS" ]; then
+      echo "   Ainda não chegou nenhuma mensagem no bot. Confira se mandou para @$BOT e tente de novo."
+      continue
+    fi
+    echo "Encontrei estas conversas:"
+    printf '%s\n' "$CHATS" | awk -F'\t' '{print "   - " $2 " (Chat ID " $1 ")"}'
+    read -r -p "Mandar os avisos para essas conversas? (s/n): " OK < /dev/tty
+    case "$OK" in
+      [sS]*) TG_CHAT=$(printf '%s\n' "$CHATS" | cut -f1 | paste -sd, -) ;;
+      *) echo "   Tudo bem. Mande o oi só de onde quer receber e tente de novo." ;;
+    esac
+  done
+  echo "   Avisos irão para: $TG_CHAT"
   umask 077
   cp .env.example .env
   # valores passados por variáveis de ambiente (não aparecem na lista de processos)
