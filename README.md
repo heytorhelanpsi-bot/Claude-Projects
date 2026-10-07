@@ -13,17 +13,17 @@ e envia avisos pelo **Telegram**.
 
 | Situação | Mensagem |
 |---|---|
-| Nível **≤ 1,20 m** ou **≥ 3,95 m** | 🚨 alerta na hora, repetido a cada 15 min enquanto durar, e ✅ quando normalizar |
+| Nível **≤ 1,20 m** ou **≥ 3,95 m** | 🚨 alerta na hora, repetido a cada 20 min enquanto durar, e ✅ quando normalizar |
 | Nível sobe **0,20 m ou mais em menos de 30 min** | 📈 subida rápida (no máximo 1 aviso a cada 30 min) |
 | Nível passa por um **metro inteiro** (1 m, 2 m, 3 m…) | ⬆️ alcançou / ⬇️ desceu abaixo |
-| Vazão **R0-R2 < 1.900 m³/h** ou **R0-R8 < 790 m³/h** | 🚨 alerta com a vazão atual, repetido a cada 15 min enquanto durar, e ✅ quando voltar à faixa |
-| A cada **15 min** | 📊 relatório com o nível e as vazões atuais (vazão fora da faixa vem marcada com 🚨) |
+| Vazão **R0-R2 < 1.900 m³/h** ou **R0-R8 < 790 m³/h** | 🚨 alerta com a vazão atual, repetido a cada 20 min enquanto durar, e ✅ quando voltar à faixa |
+| A cada **20 min** | 📊 relatório com o nível e as vazões atuais (vazão fora da faixa vem marcada com 🚨) |
 | Ponto "sem comunicação" ou parado há mais de 60 min | ⚠️ aviso (uma vez) e ✅ quando voltar |
-| SMR fora do ar ou login recusado (3 tentativas seguidas) | ❌ aviso e ✅ quando voltar |
+| SMR fora do ar ou login recusado (2 tentativas seguidas) | ❌ aviso e ✅ quando voltar |
 
 O monitor pode ser **ligado e desligado pelo Telegram** (veja "Comandos no Telegram").
-O agente verifica o SMR **a cada 5 minutos**, para que um nível crítico seja avisado logo, e
-manda o relatório completo a cada 15 minutos. Todos os valores podem ser alterados no arquivo `.env`
+O agente verifica o SMR **a cada 20 minutos** (alertas críticos saem na mesma leitura em que são detectados) e
+manda o relatório completo a cada 20 minutos. Todos os valores podem ser alterados no arquivo `.env`
 (veja `.env.example`). Vazão acima da faixa não gera alerta. Para alertar também vazão alta, preencha `R0_R2_VAZAO_MAX` /
 `R0_R8_VAZAO_MAX`. Uma margem de 0,05 m no nível e de 1% na vazão (histerese) evita que o mesmo aviso fique se repetindo
 quando o nível oscila em cima de um limite.
@@ -48,8 +48,8 @@ Qualquer pessoa cadastrada em `TELEGRAM_CHAT_ID` pode controlar o monitor pelo p
 | `/desligar` | Desliga tudo: o monitor para de acessar o SMR e não manda nenhum aviso |
 | `/ligar` | Religa o monitor e manda um relatório na hora |
 | `/status` | Lê o SMR agora e mostra os valores (funciona mesmo desligado) |
-| `/relatorios_off` | Pausa só os relatórios de 15 min; os alertas continuam |
-| `/relatorios_on` | Volta a mandar os relatórios de 15 min |
+| `/relatorios_off` | Pausa só os relatórios de 20 min; os alertas continuam |
+| `/relatorios_on` | Volta a mandar os relatórios de 20 min |
 | `/ajuda` | Lista os comandos e mostra a situação atual |
 
 A escolha (ligado/desligado, relatórios pausados) fica salva e continua valendo mesmo se o servidor

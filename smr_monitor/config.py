@@ -65,7 +65,7 @@ class Settings:
     rise_window_min: float = field(default_factory=lambda: _float("SUBIDA_RAPIDA_JANELA_MIN", "30"))
     meter_marks: bool = field(default_factory=lambda: os.getenv("AVISAR_CADA_METRO", "1") == "1")
     hysteresis_m: float = field(default_factory=lambda: _float("HISTERESE_M", "0.05"))
-    critical_repeat_min: float = field(default_factory=lambda: _float("REPETIR_CRITICO_MIN", "15"))
+    critical_repeat_min: float = field(default_factory=lambda: _float("REPETIR_CRITICO_MIN", "20"))
 
     # Faixas aceitáveis das vazões (m³/h). Alerta quando sai da faixa; vazio = sem limite.
     flow_limits: dict = field(default_factory=lambda: {
@@ -75,10 +75,10 @@ class Settings:
     flow_hysteresis_pct: float = field(default_factory=lambda: _float("VAZAO_HISTERESE_PCT", "1"))
 
     # Agendamento
-    check_interval_min: float = field(default_factory=lambda: _float("INTERVALO_VERIFICACAO_MIN", "5"))
-    report_interval_min: float = field(default_factory=lambda: _float("INTERVALO_RELATORIO_MIN", "15"))
+    check_interval_min: float = field(default_factory=lambda: _float("INTERVALO_VERIFICACAO_MIN", "20"))
+    report_interval_min: float = field(default_factory=lambda: _float("INTERVALO_RELATORIO_MIN", "20"))
     stale_min: float = field(default_factory=lambda: _float("DADO_ATRASADO_MIN", "60"))
-    fail_alert_after: int = field(default_factory=lambda: int(os.getenv("FALHAS_ANTES_DE_AVISAR", "3")))
+    fail_alert_after: int = field(default_factory=lambda: int(os.getenv("FALHAS_ANTES_DE_AVISAR", "2")))
 
     timezone: str = field(default_factory=lambda: os.getenv("FUSO_HORARIO", "America/Maceio"))
     state_file: Path = field(default_factory=lambda: Path(os.getenv("STATE_FILE", "data/state.json")))

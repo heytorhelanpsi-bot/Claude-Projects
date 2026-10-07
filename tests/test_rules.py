@@ -11,7 +11,7 @@ T0 = datetime(2026, 10, 4, 12, 0, 0)
 
 @pytest.fixture
 def cfg(tmp_path):
-    return Settings(report_interval_min=15)
+    return Settings(report_interval_min=15, critical_repeat_min=15)
 
 
 def readings(level, t, no_comm=False, r2=2140.13, r8=904.22):
@@ -111,8 +111,7 @@ def test_stale_reading(cfg):
 def test_failures(cfg):
     state = {}
     assert rules.register_failure("x", state, cfg) == []
-    assert rules.register_failure("x", state, cfg) == []
-    assert "Não foi possível ler" in rules.register_failure("<erro>", state, cfg)[0]
+    assert "Não foi possível ler" in rules.register_failure("<erro>", state, cfg)[0]  # 2ª falha = 40 min
     assert rules.register_failure("x", state, cfg) == []
     assert any("restabelecido" in m for m in run(cfg, state, 3.0, 0))
 
@@ -145,3 +144,25 @@ def test_flow_max_when_configured(cfg):
     cfg.flow_limits["r0_r8"] = (790, 910)
     state = {}
     assert any("R0-R8 ACIMA da faixa" in m and "790 a 910" in m for m in run(cfg, state, 3.0, 0, r8=950))
+
+
+def test_padrao_20_minutos():
+    cfg = Settings()
+    assert cfg.check_interval_min == 20 and cfg.report_interval_min == 20 and cfg.critical_repeat_min == 20
+    state = {}
+    reports = [m for i in range(0, 80, 20) for m in run(cfg, state, 2.5, i) if m.startswith("📊")]
+    assert len(reports) == 4  # um relatório a cada leitura de 20 min
+
+
+def test_subida_rapida_com_leituras_de_20_min():
+    cfg = Settings()
+    state = {}
+    run(cfg, state, 2.30, 0)
+    assert any("Subida rápida" in m and "+0,20 m em 20 min" in m for m in run(cfg, state, 2.50, 20))
+
+
+def test_critico_repete_a_cada_20_min():
+    cfg = Settings()
+    state = {}
+    assert any("NÍVEL CRÍTICO MÁXIMO" in m for m in run(cfg, state, 3.96, 0))
+    assert any("Continua em nível crítico" in m for m in run(cfg, state, 3.97, 20))

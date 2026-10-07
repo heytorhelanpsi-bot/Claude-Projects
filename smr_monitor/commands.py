@@ -7,8 +7,8 @@ COMMANDS = [
     ("ligar", "Liga o monitoramento e os alertas"),
     ("desligar", "Desliga o monitoramento (nenhum aviso)"),
     ("status", "Lê o SMR agora e mostra os valores"),
-    ("relatorios_off", "Pausa os relatórios de 15 min (alertas continuam)"),
-    ("relatorios_on", "Volta a enviar os relatórios de 15 min"),
+    ("relatorios_off", "Pausa os relatórios periódicos (alertas continuam)"),
+    ("relatorios_on", "Volta a enviar os relatórios periódicos"),
     ("ajuda", "Mostra os comandos"),
 ]
 
@@ -27,7 +27,7 @@ def help_text(state: dict) -> str:
 def situation(state: dict) -> str:
     mon = "🟢 LIGADO" if state.get("enabled", True) else "🔴 DESLIGADO"
     rep = "ligados" if state.get("reports", True) else "pausados"
-    return f"Situação: monitor {mon} · relatórios de 15 min {rep}"
+    return f"Situação: monitor {mon} · relatórios periódicos {rep}"
 
 
 def parse(text: str):
@@ -80,12 +80,12 @@ def handle_update(update: dict, cfg: Settings, state: dict) -> dict:
                            "Nenhum acesso ao SMR e nenhum alerta até alguém enviar /ligar.")
     elif cmd == "relatorios_off":
         state["reports"] = False
-        telegram.send(cfg, f"🔕 Relatórios de 15 min <b>pausados</b> por {who}.\n"
+        telegram.send(cfg, f"🔕 Relatórios periódicos <b>pausados</b> por {who}.\n"
                            "Os alertas (nível crítico, subida rápida, vazão baixa) continuam. "
                            "Envie /relatorios_on para voltar.")
     elif cmd == "relatorios_on":
         state["reports"] = True
         state["last_report"] = None
-        telegram.send(cfg, f"🔔 Relatórios de 15 min <b>religados</b> por {who}.")
+        telegram.send(cfg, f"🔔 Relatórios periódicos <b>religados</b> por {who}.")
         return {"check_now": state.get("enabled", True)}
     return {}
